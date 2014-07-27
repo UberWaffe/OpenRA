@@ -119,6 +119,8 @@
     <Compile Include="Air\AttackPlane.cs" />
     <Compile Include="Crates\DuplicateUnitCrateAction.cs" />
     <Compile Include="Effects\Beacon.cs" />
+    <Compile Include="Player\InWorldProduction.cs" />
+    <Compile Include="Player\ProductionItem.cs" />
     <Compile Include="Player\PlaceBeacon.cs" />
     <Compile Include="MenuPaletteEffect.cs" />
     <Compile Include="Crates\UnitUpgradeCrateAction.cs" />
