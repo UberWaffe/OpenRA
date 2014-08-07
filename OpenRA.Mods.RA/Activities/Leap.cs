@@ -59,7 +59,6 @@ namespace OpenRA.Mods.RA.Activities
 			if (ticks >= length)
 			{
 				mobile.SetLocation(mobile.toCell, mobile.toSubCell, mobile.toCell, mobile.toSubCell);
-				mobile.FinishedMoving(self);
 				mobile.IsMoving = false;
 
 				self.World.ActorMap.GetUnitsAt(mobile.toCell, mobile.toSubCell)

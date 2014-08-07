@@ -28,6 +28,9 @@ namespace OpenRA.Mods.RA.Move
 		[Desc("e.g. crate, wall, infantry")]
 		public readonly string[] Crushes = { };
 
+		[Desc("Radius within which crusing occurs")]
+		public readonly WRange CrushRadius = new WRange(512);
+
 		public readonly int WaitAverage = 5;
 
 		public readonly int WaitSpread = 2;
@@ -262,7 +265,6 @@ namespace OpenRA.Mods.RA.Move
 		{
 			SetLocation(cell, fromSubCell, cell, fromSubCell);
 			SetVisualPosition(self, self.World.Map.CenterOfCell(fromCell) + self.World.Map.SubCellOffsets[fromSubCell]);
-			FinishedMoving(self);
 		}
 
 		public void SetPosition(Actor self, WPos pos)
@@ -270,30 +272,30 @@ namespace OpenRA.Mods.RA.Move
 			var cell = self.World.Map.CellContaining(pos);
 			SetLocation(cell, fromSubCell, cell, fromSubCell);
 			SetVisualPosition(self, pos);
-			FinishedMoving(self);
 		}
 
 		public void SetVisualPosition(Actor self, WPos pos)
 		{
+			WPos oldPos = new WPos(CenterPosition.X, CenterPosition.Y, CenterPosition.Z);
 			CenterPosition = pos;
 			if (self.IsInWorld)
 			{
 				self.World.ScreenMap.Update(self);
-				self.World.ActorMap.UpdatePosition(self, this);
+				self.World.ActorMap.UpdatePosition(self, oldPos);
 			}
 		}
 
 		public void AddedToWorld(Actor self)
 		{
 			self.World.ActorMap.AddInfluence(self, this);
-			self.World.ActorMap.AddPosition(self, this);
+			self.World.ActorMap.AddPosition(self);
 			self.World.ScreenMap.Add(self);
 		}
 
 		public void RemovedFromWorld(Actor self)
 		{
 			self.World.ActorMap.RemoveInfluence(self, this);
-			self.World.ActorMap.RemovePosition(self, this);
+			self.World.ActorMap.RemovePosition(self);
 			self.World.ScreenMap.Remove(self);
 		}
 
@@ -467,17 +469,6 @@ namespace OpenRA.Mods.RA.Move
 				var crushActions = a.TraitsImplementing<ICrushable>().Where(b => b.CrushableBy(Info.Crushes, self.Owner));
 				foreach (var b in crushActions)
 					b.WarnCrush(self);
-			}
-		}
-
-		public void FinishedMoving(Actor self)
-		{
-			var crushable = self.World.ActorMap.GetUnitsAt(toCell).Where(a => a != self && a.HasTrait<ICrushable>());
-			foreach (var a in crushable)
-			{
-				var crushActions = a.TraitsImplementing<ICrushable>().Where(b => b.CrushableBy(Info.Crushes, self.Owner));
-				foreach (var b in crushActions)
-					b.OnCrush(self);
 			}
 		}
 

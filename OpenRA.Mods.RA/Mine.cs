@@ -8,6 +8,7 @@
  */
 #endregion
 
+using System.Collections.Generic;
 using System.Linq;
 using OpenRA.Mods.RA.Move;
 using OpenRA.Traits;
@@ -23,12 +24,13 @@ namespace OpenRA.Mods.RA
 		public object Create(ActorInitializer init) { return new Mine(init, this); }
 	}
 
-	class Mine : ICrushable
+	class Mine : MovementListener, ICrushable
 	{
 		readonly Actor self;
 		readonly MineInfo info;
 
 		public Mine(ActorInitializer init, MineInfo info)
+			: base(init.world)
 		{
 			this.self = init.self;
 			this.info = info;
@@ -51,6 +53,25 @@ namespace OpenRA.Mods.RA
 		public bool CrushableBy(string[] crushClasses, Player owner)
 		{
 			return info.CrushClasses.Intersect(crushClasses).Any();
+		}
+
+		public override void PositionMovementAnnouncement(HashSet<Actor> movedActors)
+		{
+			foreach (var actor in movedActors)
+			{
+				var mi = actor.Info.Traits.GetOrDefault<MobileInfo>();
+				if (mi == null)
+					continue;
+
+				if (!CrushableBy(mi.Crushes, actor.Owner))
+					continue;
+
+				var distance = (actor.CenterPosition - self.CenterPosition).Length;
+				if (mi.CrushRadius.Range < distance)
+					continue;
+
+				OnCrush(actor);
+			}
 		}
 	}
 

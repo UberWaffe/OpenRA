@@ -8,6 +8,7 @@
  */
 #endregion
 
+using System.Collections.Generic;
 using System.Linq;
 using OpenRA.Mods.RA.Move;
 using OpenRA.Mods.RA.Render;
@@ -24,13 +25,14 @@ namespace OpenRA.Mods.RA
 		public object Create(ActorInitializer init) { return new CrushableInfantry(init.self, this); }
 	}
 
-	class CrushableInfantry : ICrushable
+	class CrushableInfantry : MovementListener, ICrushable
 	{
 		readonly Actor self;
 		readonly CrushableInfantryInfo Info;
 		readonly RenderInfantry ri;
 
 		public CrushableInfantry(Actor self, CrushableInfantryInfo info)
+			: base(self.World)
 		{
 			this.self = self;
 			this.Info = info;
@@ -56,6 +58,25 @@ namespace OpenRA.Mods.RA
 				return false;
 
 			return Info.CrushClasses.Intersect(crushClasses).Any();
+		}
+
+		public override void PositionMovementAnnouncement(HashSet<Actor> movedActors)
+		{
+			foreach (var actor in movedActors)
+			{
+				var mi = actor.Info.Traits.GetOrDefault<MobileInfo>();
+				if (mi == null)
+					continue;
+
+				if (!CrushableBy(mi.Crushes, actor.Owner))
+					continue;
+
+				var distance = (actor.CenterPosition - self.CenterPosition).Length;
+				if (mi.CrushRadius.Range < distance)
+					continue;
+
+				OnCrush(actor);
+			}
 		}
 	}
 }

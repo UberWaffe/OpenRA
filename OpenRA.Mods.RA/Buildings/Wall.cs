@@ -8,7 +8,9 @@
  */
 #endregion
 
+using System.Collections.Generic;
 using System.Linq;
+using OpenRA.Mods.RA.Move;
 using OpenRA.Traits;
 
 namespace OpenRA.Mods.RA.Buildings
@@ -20,12 +22,13 @@ namespace OpenRA.Mods.RA.Buildings
 		public object Create(ActorInitializer init) { return new Wall(init.self, this); }
 	}
 
-	public class Wall : ICrushable, IBlocksBullets
+	public class Wall : MovementListener, ICrushable, IBlocksBullets
 	{
 		readonly Actor self;
 		readonly WallInfo info;
 
 		public Wall(Actor self, WallInfo info)
+			: base(self.World)
 		{
 			this.self = self;
 			this.info = info;
@@ -45,6 +48,25 @@ namespace OpenRA.Mods.RA.Buildings
 		{
 			self.Kill(crusher);
 			Sound.Play(info.CrushSound, self.CenterPosition);
+		}
+
+		public override void PositionMovementAnnouncement(HashSet<Actor> movedActors)
+		{
+			foreach (var actor in movedActors)
+			{
+				var mi = actor.Info.Traits.GetOrDefault<MobileInfo>();
+				if (mi == null)
+					continue;
+
+				if (!CrushableBy(mi.Crushes, actor.Owner))
+					continue;
+
+				var distance = (actor.CenterPosition - self.CenterPosition).Length;
+				if (mi.CrushRadius.Range < distance)
+					continue;
+
+				OnCrush(actor);
+			}
 		}
 	}
 }

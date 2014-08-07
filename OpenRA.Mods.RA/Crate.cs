@@ -11,6 +11,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using OpenRA.Mods.RA.Buildings;
+using OpenRA.Mods.RA.Move;
 using OpenRA.Mods.RA.Render;
 using OpenRA.Primitives;
 using OpenRA.Traits;
@@ -31,7 +32,7 @@ namespace OpenRA.Mods.RA
 		public object Create(ActorInitializer init) { return new Crate(init, this); }
 	}
 
-	class Crate : ITick, IPositionable, ICrushable, ISync, INotifyParachuteLanded, INotifyAddedToWorld, INotifyRemovedFromWorld
+	class Crate : MovementListener, ITick, IPositionable, ICrushable, ISync, INotifyParachuteLanded, INotifyAddedToWorld, INotifyRemovedFromWorld
 	{
 		readonly Actor self;
 		readonly CrateInfo info;
@@ -41,6 +42,7 @@ namespace OpenRA.Mods.RA
 		[Sync] public CPos Location;
 
 		public Crate(ActorInitializer init, CrateInfo info)
+			: base(init.world)
 		{
 			this.self = init.self;
 			this.info = info;
@@ -82,8 +84,10 @@ namespace OpenRA.Mods.RA
 				OnCrush(landedOn);
 		}
 
-		public void Tick(Actor self)
+		public override void Tick(Actor self)
 		{
+			base.Tick(self);
+
 			if (++ticks >= info.Lifetime * 25)
 				self.Destroy();
 		}
@@ -118,13 +122,14 @@ namespace OpenRA.Mods.RA
 
 		public void SetPosition(Actor self, CPos cell)
 		{
+			WPos oldPos = new WPos(CenterPosition.X, CenterPosition.Y, CenterPosition.Z);
 			self.World.ActorMap.RemoveInfluence(self, this);
 			Location = cell;
 			CenterPosition = self.World.Map.CenterOfCell(cell);
 
 			if (self.IsInWorld)
 			{
-				self.World.ActorMap.UpdatePosition(self, this);
+				self.World.ActorMap.UpdatePosition(self, oldPos);
 				self.World.ScreenMap.Update(self);
 			}
 		}
@@ -137,7 +142,7 @@ namespace OpenRA.Mods.RA
 		public void AddedToWorld(Actor self)
 		{
 			self.World.ActorMap.AddInfluence(self, this);
-			self.World.ActorMap.AddPosition(self, this);
+			self.World.ActorMap.AddPosition(self);
 			self.World.ScreenMap.Add(self);
 
 			var cs = self.World.WorldActor.TraitOrDefault<CrateSpawner>();
@@ -145,15 +150,36 @@ namespace OpenRA.Mods.RA
 				cs.IncrementCrates();
 		}
 
-		public void RemovedFromWorld(Actor self)
+		public override void RemovedFromWorld(Actor self)
 		{
+			base.RemovedFromWorld(self);
+
 			self.World.ActorMap.RemoveInfluence(self, this);
-			self.World.ActorMap.RemovePosition(self, this);
+			self.World.ActorMap.RemovePosition(self);
 			self.World.ScreenMap.Remove(self);
 
 			var cs = self.World.WorldActor.TraitOrDefault<CrateSpawner>();
 			if (cs != null)
 				cs.DecrementCrates();
+		}
+
+		public override void PositionMovementAnnouncement(HashSet<Actor> movedActors)
+		{
+			foreach (var actor in movedActors)
+			{
+				var mi = actor.Info.Traits.GetOrDefault<MobileInfo>();
+				if (mi == null)
+					continue;
+
+				if (!CrushableBy(mi.Crushes, actor.Owner))
+					continue;
+
+				var distance = (actor.CenterPosition - self.CenterPosition).Length;
+				if (mi.CrushRadius.Range < distance)
+					continue;
+
+				OnCrush(actor);
+			}
 		}
 	}
 }

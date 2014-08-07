@@ -8,6 +8,7 @@
  */
 #endregion
 
+using System.Collections.Generic;
 using System.Linq;
 
 namespace OpenRA.Traits
@@ -15,28 +16,26 @@ namespace OpenRA.Traits
 	public class RevealsShroudInfo : ITraitInfo
 	{
 		public readonly WRange Range = WRange.Zero;
-		public object Create(ActorInitializer init) { return new RevealsShroud(this); }
+		public object Create(ActorInitializer init) { return new RevealsShroud(init, this); }
 	}
 
-	public class RevealsShroud : ITick, ISync
+	public class RevealsShroud : MovementListener, ISync
 	{
 		RevealsShroudInfo Info;
-		[Sync] CPos cachedLocation;
+		readonly Actor self;
 
-		public RevealsShroud(RevealsShroudInfo info)
+		public RevealsShroud(ActorInitializer init, RevealsShroudInfo info)
+			: base(init.world)
 		{
+			self = init.self;
 			Info = info;
 		}
 
-		public void Tick(Actor self)
+		public override void CellMovementAnnouncement(HashSet<Actor> movedActors)
 		{
-			if (cachedLocation != self.Location)
-			{
-				cachedLocation = self.Location;
-
+			if (movedActors.Contains(self))
 				foreach (var s in self.World.Players.Select(p => p.Shroud))
 					s.UpdateVisibility(self);
-			}
 		}
 
 		public WRange Range { get { return Info.Range; } }
