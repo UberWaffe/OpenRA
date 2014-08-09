@@ -54,6 +54,10 @@ namespace OpenRA.Mods.RA.Buildings
 		{
 			foreach (var actor in movedActors)
 			{
+				// Upper limit on crush radius is 3 squares.
+				if ((actor.CenterPosition - self.CenterPosition).Length > 3072)
+					continue;
+
 				var mi = actor.Info.Traits.GetOrDefault<MobileInfo>();
 				if (mi == null)
 					continue;
