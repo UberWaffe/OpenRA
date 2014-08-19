@@ -158,5 +158,24 @@ namespace OpenRA.GameRules
 					a();
 			}
 		}
+
+		///<summary>Returns this weapon's damage-per-second against the given armour type.</summary>
+		public int GetDPS(string versusArmour = "")
+		{
+			var damageWarheads = this.Warheads.Select(w => w as DamageWarhead).Where(w => (w is DamageWarhead));
+			if (!damageWarheads.Any())
+				return 0;
+
+			var returnValue = 0;
+			foreach (var warhead in damageWarheads)
+				returnValue += warhead.GetDamageVersus(versusArmour);
+
+			// DPS = (Damage per Burst / (Ticks between bursts + Ticks in burst)) * 25 ticks per second.
+			returnValue *= Burst;
+			returnValue *= 25;
+			returnValue /= ROF + Burst * BurstDelay;
+
+			return returnValue;
+		}
 	}
 }

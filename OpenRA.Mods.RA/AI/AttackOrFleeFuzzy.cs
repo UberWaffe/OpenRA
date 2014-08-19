@@ -195,12 +195,10 @@ namespace OpenRA.Mods.RA.AI
 			{
 				var sumOfDamage = 0;
 				var arms = a.TraitsImplementing<Armament>();
+				// TODO Find the most common armor type for own army, and GetDPS versus that.
 				foreach (var arm in arms)
-				{
-					var warhead = arm.Weapon.Warheads.Select(w => w as DamageWarhead).FirstOrDefault(w => w != null);
-					if (warhead != null)
-						sumOfDamage += warhead.Damage;
-				}
+					sumOfDamage += arm.Weapon.GetDPS();
+
 				return sumOfDamage;
 			});
 		}

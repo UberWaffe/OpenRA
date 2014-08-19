@@ -55,5 +55,13 @@ namespace OpenRA.GameRules
 			float versus;
 			return Versus.TryGetValue(armor.Type, out versus) ? versus : 1f;
 		}
+
+		public int GetDamageVersus(string versusArmor = "")
+		{
+			float versus;
+			if (!Versus.TryGetValue(versusArmor, out versus))
+				versus = 1f;
+			return (int)(Damage * versus);
+		}
 	}
 }
